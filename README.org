@@ -1,0 +1,118 @@
+* Zip
+  Zippers for Common Lisp
+
+** Getting Started
+   Clone the package into your local-projects directory.
+   #+BEGIN_SRC sh
+$ git clone https://github.com/conjunctive/zip ~/quicklisp/local-projects/zip
+   #+END_SRC
+
+   Start a Common Lisp REPL (optionally using rlwrap to maintain history).
+   #+BEGIN_SRC sh
+$ rlwrap sbcl
+   #+END_SRC
+
+   Load the project.
+   #+BEGIN_SRC lisp
+(ql:quickload :zip)
+   #+END_SRC
+
+   Run the test suite.
+   #+BEGIN_SRC lisp
+(asdf:test-system :zip)
+   #+END_SRC
+
+** Examples
+   Zipper for a tree-like structure using immutable maps.
+   #+BEGIN_SRC lisp
+     (ql:quickload '(:fset :zip))
+
+     (defpackage #:zip-example
+       (:use #:cl)
+       (:local-nicknames (#:z #:zip))
+       (:local-nicknames (#:f #:fset)))
+
+     (in-package #:zip-example)
+
+     ;; A branch looks like
+     ;; (f:map (:name "branch")
+     ;;        (:nodes (f:seq ...)))
+
+     ;; A node looks like
+     ;; (f:map (:name "node")
+     ;;        (:value 12))
+
+     (defun branchp (loc)
+       "A branch node contains a :nodes key"
+       (nth-value 1 (f:lookup (z:node loc) :nodes)))
+
+     (defun children (loc)
+       "The :nodes key contains the children of a branch node"
+       (f:lookup loc :nodes))
+
+     (defun make-node (node children)
+       "Derive a branch from an existing node and a sequence of children"
+       (let ((name (f:lookup node :name)))
+         (f:map (:name name)
+                (:nodes children))))
+
+     (defun tree-zip (root)
+       "Given a root node, construct a zipper"
+       (z:->zipper #'branchp
+                   #'children
+                   #'make-node
+                   root))
+
+     (defvar root
+       (f:map (:name "root")
+              (:nodes (f:seq (f:map (:name "one")
+                                    (:value 1))
+                             (f:map (:name "two")
+                                    (:nodes (f:seq (f:map (:name "a")
+                                                          (:value "a"))
+                                                   (f:map (:name "b")
+                                                          (:value "b"))
+                                                   (f:map (:name "c")
+                                                          (:value "c")))))
+                             (f:map (:name "three")
+                                    (:value 3)))))
+       "Build a root node")
+
+     (defvar zipper
+       (tree-zip root)
+       "Instantiate a zipper")
+
+     ;; Value of the first node
+     (f:lookup (z:node (z:down zipper)) :value)
+
+     ;; What is to my right?
+     (z:rights (z:down zipper))
+
+     ;; Move to the rightmost node
+     (z:right (z:right (z:down zipper)))
+     (z:rightmost (z:down zipper))
+
+     ;; What is to my left?
+     (z:lefts (z:rightmost (z:down zipper)))
+
+     ;; Are we at a branch?
+     (z:branchp (z:right (z:down zipper)))
+     (z:branchp (z:next (z:next zipper)))
+
+     ;; Move to the first sibling of the inner branch
+     (z:down (z:right (z:down zipper)))
+     (z:next (z:next (z:next zipper)))
+
+     ;; Children of the inner branch
+     (z:children (z:right (z:down zipper)))
+
+     ;; Ascend to the root
+     (z:root (z:down (z:right (z:down zipper))))
+     (z:node (z:prev (z:prev (z:prev (z:down (z:right (z:down zipper)))))))
+   #+END_SRC
+
+** License
+   This project is licensed under the GNU Affero General Public License version 3.
+
+** Acknowledgments
+   Inspired by Clojure's implementation of Huet-style zippers
