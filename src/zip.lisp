@@ -54,7 +54,8 @@
   `(or null ,type))
 
 ;; Alias #'@ to #'fset:lookup
-(setf (fdefinition '@) #'fset:lookup)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf (fdefinition '@) #'fset:lookup))
 
 ;; Annotate #'fset:subset?
 (declaim (ftype (function (fset:set fset:set) boolean) subset?))
